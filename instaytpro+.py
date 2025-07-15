@@ -100,7 +100,7 @@ def yt_progress_hook(bot_message: types.Message, loop):
     return hook
 
 # ========== YouTube yuklab olish va yuborish ==========
-async def download_and_send(user_id: int, url: str, format_id: str, bot_message: types.Message):
+async def download_and_send(chat_id: int, url: str, format_id: str, bot_message: types.Message):
     loop = asyncio.get_running_loop()
 
     def download():
@@ -120,11 +120,11 @@ async def download_and_send(user_id: int, url: str, format_id: str, bot_message:
     try:
         info, file_path = await loop.run_in_executor(None, download)
     except Exception as e:
-        await bot.send_message(user_id, f"⚠️ Yuklab olishda xatolik: {e}")
+        await bot.send_message(chat_id, f"⚠️ Yuklab olishda xatolik: {e}")
         return
 
     if file_path.startswith("__ERROR__::"):
-        await bot.send_message(user_id, f"⚠️ Yuklab olishda xatolik: {file_path[10:]}")
+        await bot.send_message(chat_id, f"⚠️ Yuklab olishda xatolik: {file_path[10:]}")
         return
 
     try:
@@ -132,7 +132,7 @@ async def download_and_send(user_id: int, url: str, format_id: str, bot_message:
         input_file = FSInputFile(file_path)
 
         if file_size > 2048 * 1024 * 1024:
-            await bot.send_message(user_id, "❌ Fayl juda katta (2048MB dan katta).")
+            await bot.send_message(chat_id, "❌ Fayl juda katta (2048MB dan katta).")
             os.remove(file_path)
             return
 
@@ -158,10 +158,10 @@ async def download_and_send(user_id: int, url: str, format_id: str, bot_message:
             f"💾 Hajmi: {size_mb} MB"
         )
 
-        await bot.send_video(user_id, input_file, caption=caption, parse_mode="HTML")
+        await bot.send_video(chat_id, input_file, caption=caption, parse_mode="HTML")
         os.remove(file_path)
     except Exception as e:
-        await bot.send_message(user_id, f"⚠️ Fayl yuborishda xatolik: {e}")
+        await bot.send_message(chat_id, f"⚠️ Fayl yuborishda xatolik: {e}")
         if os.path.exists(file_path):
             os.remove(file_path)
 
@@ -282,12 +282,13 @@ async def yt_download_callback(callback_query: CallbackQuery):
         return
 
     url = cache[unique_id]['url']
+    chat_id = callback_query.message.chat.id  # 👈 chat ID olamiz
     await callback_query.answer("⏳ Yuklab olish boshlandi...")
 
-    bot_message = await bot.send_message(callback_query.from_user.id, "⏳ Yuklanmoqda: [░░░░░░░░░░] 0%")
+    bot_message = await bot.send_message(chat_id, "⏳ Yuklanmoqda: [░░░░░░░░░░] 0%")
 
     asyncio.create_task(
-        download_and_send(callback_query.from_user.id, url, format_id, bot_message)
+        download_and_send(chat_id, url, format_id, bot_message)
     )
 
     try:
